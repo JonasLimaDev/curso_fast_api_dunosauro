@@ -51,17 +51,22 @@ def create_user(user: UserSchema, session=Depends(get_session)):
     session.refresh(db_user)
 
     return db_user
-    # user_with_id = UserDB(id=len(database) + 1, **user.model_dump())
-
-    # database.append(user_with_id)
-
-    # return user_with_id
 
 
 @app.get("/users/", response_model=UserList)
-def read_users(session=Depends(get_session)):
-    db_users = session.scalars(select(User))
+def read_users(limit: int = 10, skip: int = 0, session=Depends(get_session)):
+    db_users = session.scalars(select(User).limit(limit).offset(skip)).all()
     return {"users": db_users}
+
+
+@app.get("/users/{user_id}", response_model=UserPublic)
+def read_user(user_id: int, session=Depends(get_session)):
+    db_user = session.scalar(select(User).where(User.id == user_id))
+    if not db_user:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="User not found"
+        )
+    return db_user
 
 
 @app.put("/users/{user_id}", response_model=UserPublic)
